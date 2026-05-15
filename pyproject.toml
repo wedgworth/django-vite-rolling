@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "django-vite-rolling"
 description = "Lean Django + Vite integration with rolling-deploy-safe manifest caching."
 readme = "README.md"
-authors = [{ name = "Wedgworth's, Inc.", email = "engineering@wedgworth.com" }]
+authors = [{ name = "Patrick Altman", email = "patrick@wedgworth.com" }]
 license = { text = "MIT" }
 requires-python = ">=3.11"
 keywords = ["django", "vite", "manifest", "rolling-deploy"]
