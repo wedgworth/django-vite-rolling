@@ -47,13 +47,13 @@ def vite_manifest(entries_names: typing.Sequence[str], request=None) -> tuple[li
         for name in names:
             if name in seen:
                 continue
+            seen.add(name)
             chunk = manifest[name]
             import_scripts, import_styles = _process(chunk.get("imports", []))
             scripts.extend(import_scripts)
             styles.extend(import_styles)
             scripts.append(chunk["file"])
             styles.extend(chunk.get("css", []))
-            seen.add(name)
         return scripts, styles
 
     return _process(entries_names)
