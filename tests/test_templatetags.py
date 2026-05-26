@@ -43,6 +43,23 @@ def test_prod_mode_emits_styles(manifest_file):
         assert 'rel="stylesheet"' in styles
 
 
+def test_prod_mode_handles_circular_chunk_imports(tmp_path):
+    import json
+    # Rollup can produce circular references between chunks (e.g. via manualChunks).
+    # Ensure we don't recurse infinitely.
+    path = tmp_path / "manifest.json"
+    path.write_text(json.dumps({
+        "src/main.ts": {"file": "main-abc123.js", "imports": ["_chunk-a.js"]},
+        "_chunk-a.js": {"file": "chunk-a-abc123.js", "imports": ["_chunk-b.js"]},
+        "_chunk-b.js": {"file": "chunk-b-abc123.js", "imports": ["_chunk-a.js"]},
+    }))
+    with override_settings(DEBUG=False, VITE={"manifest_path": str(path)}, RELEASE_VERSION="v1"):
+        scripts = _render('{% load vite %}{% vite_scripts "src/main.ts" %}')
+        assert "main-abc123.js" in scripts
+        assert "chunk-a-abc123.js" in scripts
+        assert "chunk-b-abc123.js" in scripts
+
+
 def test_prod_mode_passes_through_absolute_urls(tmp_path):
     import json
     path = tmp_path / "manifest.json"
