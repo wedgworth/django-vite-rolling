@@ -1,5 +1,6 @@
 import re
 import typing
+from urllib.parse import urljoin
 
 from django import template
 from django.conf import settings
@@ -67,9 +68,24 @@ def vite_styles(context, *entries_names: str) -> "SafeString":
     return mark_safe("\n".join(f'<link rel="stylesheet" href="{href}" />' for href in hrefs))  # nosec
 
 
+def _script_url(path: str) -> str:
+    # Not static(): chunks import each other by Vite's file name, which already has a content hash. A storage
+    # that adds its own hash (ManifestStaticFilesStorage, whitenoise) would make the browser fetch and run a
+    # second copy of each module.
+    return path if _is_absolute_url(path) else urljoin(settings.STATIC_URL, path)
+
+
 @register.simple_tag(name="vite_scripts", takes_context=True)
 def vite_scripts(context, *entries_names: str) -> "SafeString":
     request = context.get("request")
     scripts, _ = vite_manifest(entries_names, request=request)
-    srcs = (src if _is_absolute_url(src) else static(src) for src in scripts)
-    return mark_safe("\n".join(f'<script type="module" src="{src}"></script>' for src in srcs))  # nosec
+    if settings.DEBUG:
+        entries, preloads = scripts, []
+    else:
+        # The entries import their chunks; preload those so the browser fetches them in parallel.
+        manifest = get_manifest()
+        entries = [manifest[name]["file"] for name in entries_names]
+        preloads = [src for src in scripts if src not in entries]
+    tags = [f'<link rel="modulepreload" href="{_script_url(src)}" />' for src in preloads]
+    tags += [f'<script type="module" src="{_script_url(src)}"></script>' for src in entries]
+    return mark_safe("\n".join(tags))  # nosec

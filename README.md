@@ -68,7 +68,12 @@ In your base template:
 </html>
 ```
 
-In `DEBUG` mode the tags inject Vite's HMR client and module URLs pointing at the dev server. In production they resolve the named entries through the manifest, including recursively-imported chunks and their CSS.
+In `DEBUG` mode the tags inject Vite's HMR client and module URLs pointing at the dev server. In production they resolve the named entries through the manifest:
+
+- `vite_scripts` emits one `<script type="module">` per entry and a `<link rel="modulepreload">` for each chunk the entries import, so the browser fetches them in parallel.
+- `vite_styles` emits a stylesheet link for the entries' CSS and the CSS of every imported chunk.
+
+Script and preload URLs are `STATIC_URL` plus Vite's file name. They skip `static()`, because chunks import each other by Vite's file name: a storage that adds its own hash (`ManifestStaticFilesStorage`, whitenoise) would make the browser download and run each module twice. Keep Vite's default hashed file names (`[name]-[hash].js`) so these URLs change when the content does. Stylesheet URLs still go through `static()`.
 
 ## Post-deploy
 
